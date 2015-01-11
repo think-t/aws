@@ -1,4 +1,5 @@
-TemplateFormatVersion": "2010-09-09",
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "My Sample VPC Template",
   "Parameters": {
    "KeyName": {
@@ -257,6 +258,9 @@ TemplateFormatVersion": "2010-09-09",
         "SubnetId": { "Ref" : "PublicSubnet1" },
         "SourceDestCheck": "false",
         "ImageId": { "Fn::FindInMap": [ "AWSNATAMI", { "Ref": "AWS::Region" }, "AMI" ]},
+        "BlockDeviceMappings": [
+          { "DeviceName" : "/dev/sda1", "Ebs" : { "VolumeSize" : "8", "VolumeType" : "standard", "DeleteOnTermination" : "true" } }
+        ],
         "SecurityGroupIds" : [
           { "Ref" : "NATSecurityGroup" },
           { "Ref" : "VPCDefaultSecurityGroup" }
