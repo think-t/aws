@@ -1,0 +1,82 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "My Sample VPC SecurityGroup Template",
+  "Parameters" : {
+    "VpcId" : {
+      "Description"           : "Id of VPC",
+      "Type"                  : "String",
+      "AllowedPattern"        : "vpc-[a-z0-9]{8}",
+      "ConstraintDescription" : "Input format is vpc-xxxxxxxx"
+    }
+  },
+
+  "Conditions" : {
+  },
+
+  "Mappings": {
+  },
+
+  "Resources": {
+    "SecurityGroupA" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VpcId" },
+        "GroupDescription" : "Security Group A.",
+        "SecurityGroupIngress" : [
+          { "IpProtocol" : "icmp", "FromPort" : "-1", "ToPort" : "-1",    "CidrIp" : "0.0.0.0/0" },
+          { "IpProtocol" : "tcp",  "FromPort" : "0",  "ToPort" : "65535", "CidrIp" : "0.0.0.0/0" },
+          { "IpProtocol" : "udp",  "FromPort" : "0",  "ToPort" : "65535", "CidrIp" : "0.0.0.0/0" }
+        ],
+        "Tags" : [
+          { "Key" : "Name", "Value" : "SecurityGroupA" }
+        ]
+      }
+    },
+    "SecurityGroupB" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VpcId" },
+        "GroupDescription" : "Security Group B.",
+        "SecurityGroupIngress" : [
+          { "IpProtocol" : "icmp", "FromPort" : "-1", "ToPort" : "-1",    "SourceSecurityGroupId" : { "Ref" : "SecurityGroupA" } },
+          { "IpProtocol" : "tcp",  "FromPort" : "0",  "ToPort" : "65535", "SourceSecurityGroupId" : { "Ref" : "SecurityGroupA" } },
+          { "IpProtocol" : "udp",  "FromPort" : "0",  "ToPort" : "65535", "SourceSecurityGroupId" : { "Ref" : "SecurityGroupA" } }
+        ],
+        "Tags" : [
+          { "Key" : "Name", "Value" : "SecurityGroupB" }
+        ]
+      }
+    },
+    "SecurityGroupALocalPolycy" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "IpProtocol" : "tcp",
+        "FromPort"   : "0",
+        "ToPort"     : "65535",
+        "SourceSecurityGroupId" : { "Fn::GetAtt" : [ "SecurityGroupA", "GroupId" ] },
+        "GroupId" : { "Fn::GetAtt" : [ "SecurityGroupA", "GroupId" ] }
+      }
+    },
+    "SecurityGroupBLocalPolycy" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "IpProtocol" : "tcp",
+        "FromPort"   : "0",
+        "ToPort"     : "65535",
+        "SourceSecurityGroupId" : { "Fn::GetAtt" : [ "SecurityGroupB", "GroupId" ] },
+        "GroupId" : { "Fn::GetAtt" : [ "SecurityGroupB", "GroupId" ] }
+      }
+    }
+  },
+
+  "Outputs": {
+    "VPCDefaultSecurityGroupId" : {
+      "Value"                   : { "Ref" : "SecurityGroupA" },
+      "Description"             : "Id of SecurityGroupA"
+    },
+    "ALCYPRVSecurityGroupId"    : {
+      "Value"                   : { "Ref" : "SecurityGroupB" },
+      "Description"             : "Id of SecurityGroupB"
+    }
+  }
+}
