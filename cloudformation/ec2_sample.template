@@ -1,0 +1,139 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "My Sample VPC Template",
+  "Parameters" : {
+    "KeyName" : {
+      "Description"           : "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type"                  : "String",
+      "MinLength"             : "1",
+      "MaxLength"             : "64",
+      "AllowedPattern"        : "[-_ a-zA-Z0-9]*",
+      "ConstraintDescription" : "can contain only alphanumeric characters, spaces, dashes and underscores."
+    },
+    "InstanceType" : {
+      "Description"           : "EC2 Instance Type",
+      "Type"                  : "String",
+      "Default"               : "t2.micro",
+      "AllowedValues"         : [ "t1.micro", "t2.micro", "t2.small", "t2.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c3.large", "c3.xlarge", "c3.2xlarge" ],
+      "ConstraintDescription" : "must be a valid EC2 instance type." 
+    },
+    "SecurityGroup" : {
+      "Description"           : "Security Group Id of Instance",
+      "Type"                  : "String",
+      "AllowedPattern"        : "sg-[a-z0-9]{8}",
+      "ConstraintDescription" : "Input format is sg-xxxxxxxx"
+    },
+    "Subnet" : {
+      "Description"           : "Id of Subnet",
+      "Type"                  : "String",
+      "AllowedPattern"        : "subnet-[a-z0-9]{8}",
+      "ConstraintDescription" : "Input format is subnet-xxxxxxxx"
+    }
+  },
+
+  "Conditions" : {
+  },
+
+  "Mappings" : {
+    "VirtualizationType" : {
+      "t1.micro"   : { "Type" : "PV"  },
+      "t2.micro"   : { "Type" : "HVM" },
+      "t2.small"   : { "Type" : "HVM" },
+      "t2.medium"  : { "Type" : "HVM" },
+      "m3.medium"  : { "Type" : "HVM" },
+      "m3.large"   : { "Type" : "HVM" },
+      "m3.xlarge"  : { "Type" : "HVM" },
+      "m3.2xlarge" : { "Type" : "HVM" },
+      "c3.large"   : { "Type" : "HVM" },
+      "c3.xlarge"  : { "Type" : "HVM" },
+      "c3.2xlarge" : { "Type" : "HVM" }
+    },
+    "AMI" : {
+      "us-east-1"      : { "PV" : "ami-246ed34c", "HVM" : "ami-b66ed3de" },
+      "us-west-1"      : { "PV" : "ami-9b6e64de", "HVM" : "ami-4b6f650e" },
+      "us-west-2"      : { "PV" : "ami-55a7ea65", "HVM" : "ami-b5a7ea85" },
+      "eu-west-1"      : { "PV" : "ami-9c7ad8eb", "HVM" : "ami-6e7bd919" },
+      "eu-central-1"   : { "PV" : "ami-a03503b",  "HVM" : "ami-b43503a"  },
+      "ap-northeast-1" : { "PV" : "ami-2385b022", "HVM" : "ami-4985b048" },
+      "ap-southeast-1" : { "PV" : "ami-ba5c7ae8", "HVM" : "ami-ac5c7afe" },
+      "ap-southeast-2" : { "PV" : "ami-71f7954b", "HVM" : "ami-63f79559" },
+      "sa-east-1"      : { "PV" : "ami-9137828c", "HVM" : "ami-8737829a" }
+    }
+  },
+
+  "Resources" : {
+    "Instance1EIP" : {
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : {
+        "Domain" : "vpc",
+        "InstanceId" : { "Ref" : "Instance1" }
+      }
+    },
+    "Instance1" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "InstanceType" : { "Ref" : "InstanceType" },
+        "KeyName"      : { "Ref" : "KeyName" },
+        "ImageId"      : { "Fn::FindInMap" : [ "AMI", { "Ref" : "AWS::Region" }, { "Fn::FindInMap" : [ "VirtualizationType", { "Ref" : "InstanceType" }, "Type" ] } ] },
+        "SubnetId"     : { "Ref" : "Subnet" },
+        "SecurityGroupIds" : [
+          { "Ref" : "SecurityGroup" }
+        ],
+        "BlockDeviceMappings": [
+          { "DeviceName" : "/dev/xvda", "Ebs" : { "VolumeSize" : "100", "VolumeType" : "standard", "DeleteOnTermination" : "true" } }
+        ],
+        "Tags"         : [
+          {"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} }
+        ]
+      }
+    },
+    "Instance2" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "InstanceType" : { "Ref" : "InstanceType" },
+        "KeyName"      : { "Ref" : "KeyName" },
+        "ImageId"      : { "Fn::FindInMap" : [ "AMI", { "Ref" : "AWS::Region" }, { "Fn::FindInMap" : [ "VirtualizationType", { "Ref" : "InstanceType" }, "Type" ] } ] },
+        "NetworkInterfaces" : [{
+          "GroupSet"                 : [{ "Ref" : "SecurityGroup" }],
+          "AssociatePublicIpAddress" : "true",
+          "DeviceIndex"              : "0",
+          "DeleteOnTermination"      : "true",
+          "SubnetId"                 : { "Ref" : "Subnet" }
+        }],
+        "BlockDeviceMappings": [
+          { "DeviceName" : "/dev/xvda", "Ebs" : { "VolumeSize" : "100", "VolumeType" : "standard", "DeleteOnTermination" : "true" } }
+        ],
+        "Tags"         : [
+          {"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} }
+        ]
+      }
+    }
+  },
+
+  "Outputs": {
+    "Instance1" : {
+      "Value"       : { "Ref" : "Instance1" },
+      "Description" : "Id of Instance1"
+    },
+    "Instance2" : {
+      "Value"       : { "Ref" : "Instance2" },
+      "Description" : "Id of Instance2"
+    },
+    "Instance1PublicIp" : {
+      "Value"       : { "Fn::GetAtt" : [ "Instance1", "PublicIp" ] },
+      "Description" : "Elastic Ip Address of Instance1"
+    },
+    "Instance1PrivateIp" : {
+      "Value"       : { "Fn::GetAtt" : [ "Instance1", "PrivateIp" ] },
+      "Description" : "Private Ip Address of Instance1"
+    },
+    "Instance2PublicIp" : {
+      "Value"       : { "Fn::GetAtt" : [ "Instance2", "PublicIp" ] },
+      "Description" : "Public Ip Address of Instance2"
+    },
+    "Instance2PrivateIp" : {
+      "Value"       : { "Fn::GetAtt" : [ "Instance2", "PrivateIp" ] },
+      "Description" : "Private Ip Address of Instance2"
+    }
+  }
+}
