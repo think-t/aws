@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
-  "Description" : "My Sample VPC Template",
+  "Description" : "My Sample EC2 Template",
   "Parameters" : {
     "KeyName" : {
       "Description"           : "Name of an existing EC2 KeyPair to enable SSH access to the instances",
