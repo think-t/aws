@@ -1,0 +1,185 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "My Sample ELB Template.",
+  "Parameters": {
+    "VpcId" : {
+      "Description"           : "Id of Vpc.",
+      "Type"                  : "String",
+      "Default"               : "vpc-xxxxxxxx",
+      "AllowedPattern"        : "vpc-[a-z0-9]{8}",
+      "ConstraintDescription" : "Input format is vpc-xxxxxxxx"
+    },
+    "VpcCIDR" : {
+      "Description"           : "CIDR Range of Vpc Subnet",
+      "Type"                  : "String",
+      "MinLength"             : "9",
+      "MaxLength"             : "18",
+      "Default"               : "10.0.0.0/16",
+      "AllowedPattern"        : "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription" : "must be a valid CIDR range of the form x.x.x.x/x."
+    },
+    "CertName" : {
+      "Description"           : "SSL Certificate Name.",
+      "Type"                  : "String",
+      "Default"               : "arn:aws:iam::xxxxxxxxxxxx:server-certificate/cert.example.jp",
+      "MinLength"             : "1",
+      "MaxLength"             : "64",
+      "AllowedPattern"        : "[-_ .:/a-zA-Z0-9]*",
+      "ConstraintDescription" : "can contain only alphanumeric characters, spaces, dashes and underscores."
+    },
+    "Subnet1" : {
+      "Description"           : "Id of Subnet1.",
+      "Type"                  : "String",
+      "Default"               : "subnet-xxxxxxxx",
+      "AllowedPattern"        : "subnet-[a-z0-9]{8}",
+      "ConstraintDescription" : "Input format is subnet-xxxxxxxx"
+    },
+    "Subnet2" : {
+      "Description"           : "Id of Subnet2.",
+      "Type"                  : "String",
+      "Default"               : "subnet-xxxxxxxx",
+      "AllowedPattern"        : "subnet-[a-z0-9]{8}",
+      "ConstraintDescription" : "Input format is subnet-xxxxxxxx"
+    }
+  },
+
+  "Conditions" : {
+  },
+
+  "Mappings": {
+    "ELBLogger": {
+      "us-east-1":      { "AccountID": "127311923021" },
+      "us-west-1":      { "AccountID": "027434742980" },
+      "us-west-2":      { "AccountID": "797873946194" },
+      "eu-west-1":      { "AccountID": "156460612806" },
+      "ap-southeast-1": { "AccountID": "114774131450" },
+      "ap-southeast-2": { "AccountID": "783225319266" },
+      "ap-northeast-1": { "AccountID": "582318560864" },
+      "sa-east-1":      { "AccountID": "507241528517" },
+      "us-gov-west-1":  { "AccountID": "048591011584" }
+    }
+  },
+
+  "Resources": {
+    "InternetELBSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VpcId" },
+        "GroupDescription" : "Security Group Of Internet ELB.",
+        "SecurityGroupIngress" : [
+          { "IpProtocol" : "tcp", "FromPort" : "443", "ToPort" : "443", "CidrIp" : "0.0.0.0/0" }
+        ]
+      }
+    },
+    "InternalELBSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VpcId" },
+        "GroupDescription" : "Security Group Of Internal ELB.",
+        "SecurityGroupIngress" : [
+          { "IpProtocol" : "tcp", "FromPort" : "80",  "ToPort" : "80",  "CidrIp" : { "Ref" : "VpcCIDR" } }
+        ]
+      }
+    },
+    "ELBLogBucket" : {
+      "Type" : "AWS::S3::Bucket",
+      "Properties" : {
+        "AccessControl" : "Private"
+      }
+    },
+    "ELBLogBucketPolicy" : {
+      "Type" : "AWS::S3::BucketPolicy",
+      "Properties" : {
+        "Bucket"         : { "Ref" : "ELBLogBucket" },
+        "PolicyDocument" : {
+          "Id"        : "ELBLogBucketPolicy",
+          "Statement" : [{
+            "Sid"       : "WriteAccess",
+            "Action"    : [ "s3:PutObject" ],
+            "Effect"    : "Allow",
+            "Resource"  : { "Fn::Join" : [ "", [ "arn:aws:s3:::", { "Ref" : "ELBLogBucket" } , "/AWSLogs/", { "Ref" : "AWS::AccountId" }, "/*" ] ] },
+            "Principal" : { "AWS" : { "Fn::FindInMap" : [ "ELBLogger", { "Ref": "AWS::Region" }, "AccountID" ] } }
+          }]
+        }
+      }
+    },
+    "InternetELB" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "AccessLoggingPolicy": {
+          "Enabled"      : "true",
+          "S3BucketName" : {"Ref":"ELBLogBucket"}
+        },
+        "CrossZone"   : "true",
+        "HealthCheck" : {
+          "Target"             : "HTTP:80/index.html",
+          "HealthyThreshold"   : "10",
+          "UnhealthyThreshold" : "2",
+          "Interval"           : "30",
+          "Timeout"            : "5"
+        },
+        "LBCookieStickinessPolicy" : [
+          { "CookieExpirationPeriod" : "300", "PolicyName" : "DefaultStickinessPolicy" }
+        ],
+        "Listeners" : [
+          {
+            "LoadBalancerPort" : "443",
+            "InstancePort"     : "80",
+            "Protocol"         : "HTTPS",
+            "SSLCertificateId" : { "Ref" : "CertName" },
+            "PolicyNames"      : [ "DefaultStickinessPolicy" ]
+          }
+        ],
+        "Scheme"         : "internet-facing",
+        "SecurityGroups" : [ { "Ref" : "InternetELBSecurityGroup" } ],
+        "Subnets"        : [ { "Ref" : "Subnet1" }, { "Ref" : "Subnet2" } ]
+      }
+    },
+    "InternalELB" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "AccessLoggingPolicy": {
+          "Enabled"      : "true",
+          "S3BucketName" : {"Ref":"ELBLogBucket"}
+        },
+        "CrossZone"   : "true",
+        "HealthCheck" : {
+          "Target"             : "TCP:80",
+          "HealthyThreshold"   : "10",
+          "UnhealthyThreshold" : "2",
+          "Interval"           : "30",
+          "Timeout"            : "5"
+        },
+        "Listeners" : [
+          {
+            "LoadBalancerPort" : "80",
+            "InstancePort"     : "80",
+            "Protocol"         : "HTTP"
+          }
+        ],
+        "Scheme"         : "internal",
+        "SecurityGroups" : [ { "Ref" : "InternalELBSecurityGroup" } ],
+        "Subnets"        : [ { "Ref" : "Subnet1" }, { "Ref" : "Subnet2" } ]
+      }
+    }
+  },
+
+  "Outputs": {
+    "InternetELBSecurityGroup" : {
+      "Description" : "Id of Internet ELB Security Group",
+      "Value"       : { "Ref" : "InternetELBSecurityGroup" }
+    },
+    "InternalELBSecurityGroup" : {
+      "Description" : "Id of Internal ELB Security Group",
+      "Value"       : { "Ref" : "InternalELBSecurityGroup" }
+    },
+    "InternetELB" : {
+      "Description" : "Id of Internet ELB",
+      "Value"       : { "Ref" : "InternetELB" }
+    },
+    "InternalELB" : {
+      "Description" : "Id of Internal ELB",
+      "Value"       : { "Ref" : "InternalELB" }
+    }
+  }
+}
