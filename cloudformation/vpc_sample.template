@@ -210,7 +210,7 @@
       "DependsOn" : "AttachGateway",
       "Properties": {
         "VpcId"            : { "Ref": "VPC" },
-        "AvailabilityZone" : { "Fn::FindInMap" : [ "AZ", { "Ref" : "AWS::Region" }, "primary" ] },
+        "AvailabilityZone" : { "Fn::FindInMap" : [ "AZ", { "Ref" : "AWS::Region" }, "secondary" ] },
         "CidrBlock"        : { "Fn::FindInMap" : [ "NETWORK", "Subnet4", "CIDR" ] },
         "Tags" : [
           {"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} },
