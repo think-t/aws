@@ -1,0 +1,145 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "My Sample Elasticache Template",
+  "Parameters" : {
+    "AutoMinorVersionUpgrade" : {
+      "Description"           : "ElastiCache Auto AllowMinorVersionUpgrade.",
+      "Type"                  : "String",
+      "Default"               : "false",
+      "AllowedPattern"        : "(true|false)",
+      "ConstraintDescription" : "Must Be true or false."
+    },
+    "CacheNodeType" : {
+      "Description"           : "ElastiCache Instance Type",
+      "Type"                  : "String",
+      "Default"               : "cache.t2.micro",
+      "AllowedValues"         : [ "cache.m1.small", "cache.m1.medium", "cache.m1.large", "cache.m1.xlarge", "cache.m2.xlarge", "cache.m2.2xlaege", "cache.m2.4xlarge", "cache.t2.micro", "cache.t2.small", "cache.t2.medium", "cache.m3.medium", "cache.m3.large", "cache.m3.xlarge", "cache.m3.2xlarge", "cache.r3.large", "cache.r3.xlarge", "cache.r3.2xlarge", "cache.r3.4xlarge", "cache.r3.8xlarge" ],
+      "ConstraintDescription" : "must be a valid ElastiCache instance type." 
+    },
+    "ClusterName" : {
+      "Description"           : "Name of ElastiCache Cluster Name.",
+      "Type"                  : "String",
+      "Default"               : "my-elasticache",
+      "MinLength"             : "1",
+      "MaxLength"             : "20",
+      "AllowedPattern"        : "[-a-zA-Z0-9]*",
+      "ConstraintDescription" : "can contain only alphanumeric characters, spaces, dashes and underscores."
+    },
+    "Engine" : {
+      "Description"           : "Name of ElastiCache Engine.",
+      "Type"                  : "String",
+      "Default"               : "memcached",
+      "AllowedPattern"        : "(memcached|redis)",
+      "ConstraintDescription" : "Must Be memcached or redis."
+    },
+    "EngineVersion" : {
+      "Description"           : "Version of ElastiCache Cluster.",
+      "Type"                  : "String",
+      "Default"               : "1.4.14",
+      "AllowedPattern"        : "[.0-9]*",
+      "ConstraintDescription" : "can contain only numbers, period."
+    },
+    "NumCacheNodes" : {
+      "Description"           : "Number of ElastiCache Instance.",
+      "Type"                  : "Number",
+      "Default"               : "1",
+      "MinValue"              : "1",
+      "MaxValue"              : "20",
+      "ConstraintDescription" : "Valid Number is 1 between 20."
+    },
+    "Port" : {
+      "Description"           : "ElastiCache Listen Port.",
+      "Type"                  : "Number",
+      "Default"               : "11211",
+      "MinValue"              : "0",
+      "MaxValue"              : "65535",
+      "ConstraintDescription" : "Valid Number is 0 between 65535."
+    },
+    "PreferredMaintenanceWindow" : {
+      "Description"           : "The weekly time range (in UTC) during which system maintenance can occur.",
+      "Type"                  : "String",
+      "Default"               : "sat:20:00-sat:21:00",
+      "AllowedPattern"        : "[a-zA-Z]{3}\\:(\\d{1,2})\\:(\\d{1,2})-[a-zA-Z]{3}\\:(\\d{1,2})\\:(\\d{1,2})",  
+      "ConstraintDescription" : "Must Begin A Valid Time."
+    },
+    "SecurityGroup" : {
+      "Description"           : "Security Group Id of ElastiCache.",
+      "Type"                  : "String",
+      "AllowedPattern"        : "sg-[a-z0-9]{8}",
+      "ConstraintDescription" : "Input format is sg-xxxxxxxx."
+    },
+    "Subnet1" : {
+      "Description"           : "Id of ElastiCache Subnet1",
+      "Type"                  : "String",
+      "AllowedPattern"        : "subnet-[a-z0-9]{8}",
+      "ConstraintDescription" : "Input format is subnet-xxxxxxxx."
+    },
+    "Subnet2" : {
+      "Description"           : "Id of ElastiCache Subnet2",
+      "Type"                  : "String",
+      "AllowedPattern"        : "subnet-[a-z0-9]{8}",
+      "ConstraintDescription" : "Input format is subnet-xxxxxxxx."
+    }
+  },
+
+  "Conditions" : {
+  },
+
+  "Mappings" : {
+  },
+
+  "Resources" : {
+    "CacheParameterGroup" : {
+      "Type" : "AWS::ElastiCache::ParameterGroup",
+      "Properties" : {
+        "CacheParameterGroupFamily" : "memcached1.4",
+        "Description"               : "Parameter Group of Memcached 1.4.14 later",
+        "Properties" : {
+          "cas_disabled"                   : "0",
+          "chunk_size"                     : "48",
+          "chunk_size_growth_factor"       : "1.25",
+          "error_on_memory_exhausted"      : "0",
+          "max_item_size"                  : "1048576",
+          "maxconns_fast"                  : "0",
+          "memcached_connections_overhead" : "100",
+          "slab_automove"                  : "0",
+          "slab_reassign"                  : "0"
+        }
+      }
+    },
+    "CacheSubnetGroup" : {
+      "Type" : "AWS::ElastiCache::SubnetGroup",
+      "Properties" : {
+        "Description" : "MyElastiCacheSubnetGroup",
+        "SubnetIds"   : [ { "Ref" : "Subnet1" }, { "Ref" : "Subnet2" } ]
+      }
+    },
+    "CacheCluster" : {
+      "Type" : "AWS::ElastiCache::CacheCluster",
+      "Properties" : {
+        "AutoMinorVersionUpgrade"    : { "Ref" : "AutoMinorVersionUpgrade" },
+        "CacheNodeType"              : { "Ref" : "CacheNodeType" },
+        "CacheParameterGroupName"    : { "Ref" : "CacheParameterGroup" },
+        "CacheSubnetGroupName"       : { "Ref" : "CacheSubnetGroup" },
+        "ClusterName"                : { "Ref" : "ClusterName" },
+        "Engine"                     : { "Ref" : "Engine" },
+        "EngineVersion"              : { "Ref" : "EngineVersion" },
+        "NumCacheNodes"              : { "Ref" : "NumCacheNodes" },
+        "Port"                       : { "Ref" : "Port" },
+        "PreferredMaintenanceWindow" : { "Ref" : "PreferredMaintenanceWindow" },
+        "VpcSecurityGroupIds"        : [ { "Ref" : "SecurityGroup" } ]
+      }
+    }
+  },
+
+  "Outputs": {
+    "EndpointAddress" : {
+      "Description" : "The DNS address of the configuration endpoint for the Memcached cache cluster.",
+      "Value"       : { "Fn::GetAtt" : [ "CacheCluster", "ConfigurationEndpoint.Address" ] }
+    },
+    "EndpointPort" : {
+      "Description" : "The port number of the configuration endpoint for the Memcached cache cluster.",
+      "Value"       : { "Fn::GetAtt" : [ "CacheCluster", "ConfigurationEndpoint.Port" ] }
+    }
+  }
+}
