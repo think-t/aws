@@ -1,0 +1,66 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "My Sample MicrosoftAD Template",
+  "Parameters" : {
+    "CreateAlias" : {
+      "Description" : "If You choose True, You can create Alias Microsoft Active Directory",
+      "Type"        : "String",
+      "Default"     : "false"
+    },
+    "EnableSso" : {
+      "Description" : "If You choose True, You can enable Single Sign On Function",
+      "Type"        : "String",
+      "Default"     : "false"
+    },
+    "Name" : {
+      "Description" : "Fully Query Domain Name of This Microsoft AD",
+      "Type"        : "String",
+      "Default"     : "msad.example.com"
+    },
+    "Password" : {
+      "Description" : "Password of Microsoft AD's Default Administrator(User:Admin)",
+      "Type"        : "String",
+      "NoEcho"      : "true",
+      "Default"     : "password"
+    },
+    "ShortName" : {
+      "Description" : "NetBIOS Name of This Microsoft AD",
+      "Type"        : "String",
+      "Default"     : "msad"
+    },
+    "SubnetIds" : {
+      "Description" : "Id of Subnet to Launch This Microsoft AD",
+      "Type"        : "List<AWS::EC2::Subnet::Id>"
+    },
+    "VpcId" : {
+      "Description" : "Id of VPC to Launch This Microsoft AD",
+      "Type"        : "AWS::EC2::VPC::Id"
+    }
+  },
+
+  "Conditions" : {
+  },
+
+  "Mappings" : {
+  },
+
+  "Resources" : {
+    "MicrosoftAD" : {
+      "Type" : "AWS::DirectoryService::MicrosoftAD",
+      "Properties" : {
+        "CreateAlias" : { "Ref" : "CreateAlias" },
+        "EnableSso"   : { "Ref" : "EnableSso"   },
+        "Name"        : { "Ref" : "Name"        },
+        "Password"    : { "Ref" : "Password"    },
+        "ShortName"   : { "Ref" : "ShortName"   },
+        "VpcSettings" : {
+          "SubnetIds" : { "Ref" : "SubnetIds" },
+          "VpcId"     : { "Ref" : "VpcId"     }
+        }
+      }
+    }
+  },
+
+  "Outputs": {
+  }
+}
