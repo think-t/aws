@@ -17,17 +17,15 @@
       "AllowedValues"         : [ "t1.micro", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "c1.medium", "c1.xlarge", "cc2.8xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "cr1.8xlarge", "hi1.4xlarge", "t2.micro", "t2.small", "t2.medium", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge", "i2.xlarge", "i2.2xlarge", "i2.4xlarge", "i2.8xlarge", "hs1.8xlarge" ],
       "ConstraintDescription" : "must be a valid EC2 instance type." 
     },
-    "SecurityGroup" : {
-      "Description"           : "Security Group Id of Instance",
-      "Type"                  : "String",
-      "AllowedPattern"        : "sg-[a-z0-9]{8}",
-      "ConstraintDescription" : "Input format is sg-xxxxxxxx"
+    "SecurityGroupIds" : {
+      "Description"           : "Security Group List of Instance",
+      "Type"                  : "List<AWS::EC2::SecurityGroup::Id>",
+      "ConstraintDescription" : "must be exists security group list."
     },
-    "Subnet" : {
-      "Description"           : "Id of Subnet",
-      "Type"                  : "String",
-      "AllowedPattern"        : "subnet-[a-z0-9]{8}",
-      "ConstraintDescription" : "Input format is subnet-xxxxxxxx"
+    "Subnets" : {
+      "Description"           : "List of Subnet",
+      "Type"                  : "List<AWS::EC2::Subnet::Id>",
+      "ConstraintDescription" : "must be exists subnet list."
     }
   },
 
@@ -104,15 +102,14 @@
         "InstanceType" : { "Ref" : "InstanceType" },
         "KeyName"      : { "Ref" : "KeyName" },
         "ImageId"      : { "Fn::FindInMap" : [ "AMI", { "Ref" : "AWS::Region" }, { "Fn::FindInMap" : [ "VirtualizationType", { "Ref" : "InstanceType" }, "Type" ] } ] },
-        "SubnetId"     : { "Ref" : "Subnet" },
-        "SecurityGroupIds" : [
-          { "Ref" : "SecurityGroup" }
-        ],
+        "SubnetId"     : { "Fn::Select" : [ "0", { "Ref" : "Subnets" } ] },
+        "SecurityGroupIds" : { "Ref" : "SecurityGroupIds" },
         "BlockDeviceMappings": [
           { "DeviceName" : "/dev/xvda", "Ebs" : { "VolumeSize" : "100", "VolumeType" : "standard", "DeleteOnTermination" : "true" } }
         ],
-        "Tags"         : [
-          {"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} }
+        "Tags" : [
+          { "Key" : "Name", "Value" : "Instance1" },
+          { "Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} }
         ]
       }
     },
@@ -123,17 +120,18 @@
         "KeyName"      : { "Ref" : "KeyName" },
         "ImageId"      : { "Fn::FindInMap" : [ "AMI", { "Ref" : "AWS::Region" }, { "Fn::FindInMap" : [ "VirtualizationType", { "Ref" : "InstanceType" }, "Type" ] } ] },
         "NetworkInterfaces" : [{
-          "GroupSet"                 : [{ "Ref" : "SecurityGroup" }],
+          "GroupSet"                 : { "Ref" : "SecurityGroupIds" },
           "AssociatePublicIpAddress" : "true",
           "DeviceIndex"              : "0",
           "DeleteOnTermination"      : "true",
-          "SubnetId"                 : { "Ref" : "Subnet" }
+          "SubnetId"                 : { "Fn::Select" : [ "1", { "Ref" : "Subnets" } ] }
         }],
         "BlockDeviceMappings": [
           { "DeviceName" : "/dev/xvda", "Ebs" : { "VolumeSize" : "100", "VolumeType" : "standard", "DeleteOnTermination" : "true" } }
         ],
-        "Tags"         : [
-          {"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} }
+        "Tags" : [
+          { "Key" : "Name", "Value" : "Instance2" },
+          { "Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} }
         ]
       }
     }
