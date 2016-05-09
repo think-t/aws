@@ -1,0 +1,149 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "My RDS for Aurora Sample Template",
+  "Parameters": {
+    "DBInstanceClass" : {
+      "Description"           : "RDS DB Instance Type.",
+      "Type"                  : "String",
+      "Default"               : "db.r3.large",
+      "AllowedValues"         : [ "db.r3.large", "db.r3.xlarge", "db.r3.2xlarge", "db.r3.4xlarge", "db.r3.8xlarge" ],    
+      "ConstraintDescription" : "Must Be A Valid RDS Instance Type."
+    },
+    "MasterUserName" : {
+      "Description"           : "RDS DB Master User Name.",
+      "Type"                  : "String",
+      "Default"               : "admin",
+      "MinLength"             : "1",
+      "MaxLength"             : "16",
+      "AllowedPattern"        : "[a-zA-Z][a-zA-Z0-9]*",
+      "ConstraintDescription" : "Must Begin With A Letter And Contain Only Alphanumeric Characters."
+    },
+    "MasterUserPassword" : {
+      "Description"           : "RDS DB Master User Password.",
+      "Type"                  : "String",
+      "Default"               : "password",
+      "NoEcho"                : "true",
+      "MinLength"             : "8",
+      "MaxLength"             : "41",
+      "AllowedPattern"        : "[\\p{Print}&&[^/@]]*",
+      "ConstraintDescription" : "Must Begin With Printable ASCII Characters."
+    },
+    "PubliclyAccessible" : {
+      "Description"           : "Allowed or Disallowed RDS DB Endpoint from Public Network.",
+      "Type"                  : "String",
+      "Default"               : "false",
+      "AllowedPattern"        : "(true|false)",
+      "ConstraintDescription" : "A Valid Value is true or false."
+    },
+    "SubnetIds" : {
+      "Description" : "Id of Subnet to Launch This Aurora Cluster.",
+      "Type"        : "List<AWS::EC2::Subnet::Id>"
+    },
+    "VpcSecurityGroupIds" : {
+      "Description"           : "List of SecurityGroupId",
+      "Type"                  : "List<AWS::EC2::SecurityGroup::Id>"
+    }
+  },
+
+  "Conditions" : {
+  },
+
+  "Mappings": {
+    "AZ" : {
+      "us-east-1"      : { "primary" : "us-east-1b",      "secondary" : "us-east-1c"      },
+      "us-west-1"      : { "primary" : "us-west-1b",      "secondary" : "us-west-1c"      },
+      "us-west-2"      : { "primary" : "us-west-2a",      "secondary" : "us-west-2b"      },
+      "eu-west-1"      : { "primary" : "eu-west-1a",      "secondary" : "eu-west-1b"      },
+      "eu-central-1"   : { "primary" : "eu-central-1a",   "secondary" : "eu-central-1b"   },
+      "ap-northeast-1" : { "primary" : "ap-northeast-1a", "secondary" : "ap-northeast-1c" },
+      "ap-northeast-2" : { "primary" : "ap-northeast-2a", "secondary" : "ap-northeast-2c" },
+      "ap-southeast-1" : { "primary" : "ap-southeast-1a", "secondary" : "ap-southeast-1b" },
+      "ap-southeast-2" : { "primary" : "ap-southeast-2a", "secondary" : "ap-southeast-2b" },
+      "sa-east-1"      : { "primary" : "sa-east-1a",      "secondary" : "sa-east-1b"      }
+    }
+  },
+
+  "Resources": {
+    "DBSubnetGroup" : {
+      "Type" : "AWS::RDS::DBSubnetGroup",
+      "Properties" : {
+        "DBSubnetGroupDescription" : "Database Subnets for Aurora.",
+        "SubnetIds"                : { "Ref" : "SubnetIds" }
+      }
+    },
+    "RDSDBClusterParameterGroup" : {
+      "Type" : "AWS::RDS::DBClusterParameterGroup",
+      "Properties" : {
+        "Description" : "Aurora DB Cluster Parameter Group.",
+        "Family"      : "aurora5.6",
+        "Parameters" : {
+          "character_set_database"              : "utf8mb4",
+          "character_set_client"                : "utf8mb4",
+          "character_set_connection"            : "utf8mb4",
+          "character_set_results"               : "utf8mb4",
+          "character_set_server"                : "utf8mb4",
+          "skip-character-set-client-handshake" : "TRUE"
+        }
+      }
+    },
+    "RDSDBParameterGroup" : {
+      "Type" : "AWS::RDS::DBParameterGroup",
+      "Properties" : {
+        "Description" : "Aurora DB Parameter Group.",
+        "Family"      : "aurora5.6",
+        "Parameters" : {
+        }
+      }
+    },
+    "RDSCluster" : {
+      "Type" : "AWS::RDS::DBCluster",
+      "Properties" : {
+        "MasterUsername"              : { "Ref" : "MasterUserName"             },
+        "MasterUserPassword"          : { "Ref" : "MasterUserPassword"         },
+        "DBSubnetGroupName"           : { "Ref" : "DBSubnetGroup"              },
+        "Engine"                      : "aurora",
+        "DBClusterParameterGroupName" : { "Ref" : "RDSDBClusterParameterGroup" },
+        "VpcSecurityGroupIds"         : { "Ref" : "VpcSecurityGroupIds" }
+      }
+    },
+    "RDSDBInstance1" : {
+      "Type" : "AWS::RDS::DBInstance",
+      "Properties" : {
+        "DBSubnetGroupName"    : { "Ref" : "DBSubnetGroup" },
+        "Engine" : "aurora",
+        "DBClusterIdentifier"  : { "Ref" : "RDSCluster" },
+        "DBParameterGroupName" : { "Ref" : "RDSDBParameterGroup" },
+        "PubliclyAccessible"   : { "Ref" : "PubliclyAccessible" },
+        "AvailabilityZone"     : { "Fn::FindInMap" : [ "AZ", { "Ref" : "AWS::Region" }, "primary" ] },
+        "DBInstanceClass"      : { "Ref" : "DBInstanceClass" }
+      }
+    },
+    "RDSDBInstance2" : {
+      "Type" : "AWS::RDS::DBInstance",
+      "Properties" : {
+        "DBSubnetGroupName"    : { "Ref" : "DBSubnetGroup" },
+        "Engine" : "aurora",
+        "DBClusterIdentifier"  : { "Ref" : "RDSCluster" },
+        "DBParameterGroupName" : { "Ref" : "RDSDBParameterGroup" },
+        "PubliclyAccessible"   : { "Ref" : "PubliclyAccessible" },
+        "AvailabilityZone"     : { "Fn::FindInMap" : [ "AZ", { "Ref" : "AWS::Region" }, "secondary" ] },
+        "DBInstanceClass"      : { "Ref" : "DBInstanceClass" }
+      }
+    },
+    "RDSDBInstance3" : {
+      "Type" : "AWS::RDS::DBInstance",
+      "Properties" : {
+        "DBSubnetGroupName"    : { "Ref" : "DBSubnetGroup" },
+        "Engine" : "aurora",
+        "DBClusterIdentifier"  : { "Ref" : "RDSCluster" },
+        "DBParameterGroupName" : { "Ref" : "RDSDBParameterGroup" },
+        "PubliclyAccessible"   : { "Ref" : "PubliclyAccessible" },
+        "AvailabilityZone"     : { "Fn::FindInMap" : [ "AZ", { "Ref" : "AWS::Region" }, "primary" ] },
+        "DBInstanceClass"      : { "Ref" : "DBInstanceClass" }
+      }
+    }
+  },
+
+  "Outputs": {
+  }
+}
